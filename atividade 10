@@ -1,0 +1,162 @@
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class Main {
+    private static List<ListaCompras> listas = new ArrayList<>();
+    private static Scanner sc = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        int opcao;
+        do {
+            System.out.println(".-------------------.");
+            System.out.println("| Gestão de compras |");
+            System.out.println("'-------------------'");
+            System.out.println("Selecione a opção:");
+            System.out.println("1. Nova lista");
+            System.out.println("2. Fazer compras");
+            System.out.println("3. Relatório");
+            System.out.println("0. Sair");
+            System.out.println();
+            System.out.print(">> Opção: ");
+            
+            opcao = sc.nextInt();
+            sc.nextLine();
+
+            if (opcao == 1) {
+                novaLista();
+            } else if (opcao == 2) {
+                fazerCompras();
+            } else if (opcao == 3) {
+                relatorio();
+            }
+            System.out.println();
+        } while (opcao != 0);
+    }
+
+    private static void novaLista() {
+        String dataPadrao = "lista_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        System.out.print(">> Nova lista, informe o nome [" + dataPadrao + "]: ");
+        String nome = sc.nextLine();
+        if (nome.trim().isEmpty()) {
+            nome = dataPadrao;
+        }
+
+        ListaCompras lista = new ListaCompras(nome);
+
+        while (true) {
+            System.out.println(">> ---Informe o item---------");
+            System.out.print(">> Descrição: ");
+            String descricao = sc.nextLine();
+            if (descricao.trim().isEmpty()) {
+                System.out.println(">> ---Lista salva!---------");
+                break;
+            }
+
+            System.out.print(">> Unidade (UN, KG, LT): ");
+            String unidade = sc.nextLine();
+
+            System.out.print(">> Quantidade: ");
+            double quantidade = sc.nextDouble();
+            sc.nextLine();
+
+            lista.adicionarItem(new Item(descricao, unidade, quantidade));
+        }
+
+        listas.add(lista);
+    }
+
+    private static void fazerCompras() {
+        if (listas.isEmpty()) {
+            System.out.println("Nenhuma lista cadastrada.");
+            return;
+        }
+
+        System.out.println("Selecione uma lista:");
+        for (int i = 0; i < listas.size(); i++) {
+            System.out.println((i + 1) + ". " + listas.get(i).getNome());
+        }
+        System.out.print(">> Opção: ");
+        int idx = sc.nextInt() - 1;
+        sc.nextLine();
+
+        if (idx < 0 || idx >= listas.size()) {
+            System.out.println("Lista inválida.");
+            return;
+        }
+
+        ListaCompras lista = listas.get(idx);
+        System.out.println(">> ---Fazer compras [" + lista.getNome() + "]---");
+
+        List<Item> itens = lista.getItens();
+        for (int i = 0; i < itens.size(); i++) {
+            Item item = itens.get(i);
+            System.out.println(">> (" + (i + 1) + "/" + itens.size() + ") Produto " + item.getDescricao() + " " + (int)item.getQuantidadePlanejada() + " " + item.getUnidade());
+            
+            System.out.print(">> Quantidade [" + (int)item.getQuantidadePlanejada() + " " + item.getUnidade() + "]: ");
+            String qtdInput = sc.nextLine();
+            double qtdFinal = qtdInput.trim().isEmpty() ? item.getQuantidadePlanejada() : Double.parseDouble(qtdInput);
+
+            System.out.print(">> Preço: ");
+            double preco = sc.nextDouble();
+            sc.nextLine();
+
+            if (preco > 0) {
+                item.setQuantidadeComprada(qtdFinal);
+                item.setPrecoUnitario(preco);
+                item.setComprado(true);
+            } else {
+                item.setComprado(false);
+            }
+        }
+
+        lista.setRealizada(true);
+        System.out.println(">> ---Total------------------");
+        System.out.printf(">> R$: %.2f\n", lista.getTotalLista());
+    }
+
+    private static void relatorio() {
+        if (listas.isEmpty()) {
+            System.out.println("Nenhuma lista cadastrada.");
+            return;
+        }
+
+        System.out.println("Selecione uma lista:");
+        for (int i = 0; i < listas.size(); i++) {
+            System.out.println((i + 1) + ". " + listas.get(i).getNome());
+        }
+        System.out.print(">> Opção: ");
+        int idx = sc.nextInt() - 1;
+        sc.nextLine();
+
+        if (idx < 0 || idx >= listas.size()) {
+            System.out.println("Lista inválida.");
+            return;
+        }
+
+        ListaCompras lista = listas.get(idx);
+        System.out.println(">> ---Relatório [" + lista.getNome() + "]---");
+        System.out.println(">> Item, Descrição, Qtd, UN, Preço");
+
+        List<Item> itens = lista.getItens();
+        int contador = 1;
+        double totalItensComprados = 0;
+
+        for (Item item : itens) {
+            if (item.isComprado()) {
+                System.out.printf(">> %d, %s, %d, %s, %.2f\n", 
+                    contador, 
+                    item.getDescricao(), 
+                    (int)item.getQuantidadeComprada(), 
+                    item.getUnidade(), 
+                    item.getPrecoUnitario()
+                );
+                totalItensComprados += item.getQuantidadeComprada();
+                contador++;
+            }
+        }
+        System.out.printf(">> 0, TOTAL, %d, UN, %.2f\n", (int)totalItensComprados, lista.getTotalLista());
+    }
+}
